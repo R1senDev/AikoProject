@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добро пожаловать | Aiko Project</title>
+    <link rel="stylesheet" href="styles/welcome.css">
+</head>
+<body>
+    <script type="text/javascript" src="scripts/welcome.js"></script>
+
+    <div class="block lpad">
+        <img src="images/aikologo.png" height="200pt">
+        <h1>Добро пожаловать!</h1>
+        <h2 class="htrans"><a href="https://github.com/R1senDev/AikoProject">Aiko Project</a> от <a href="https://github.com/R1senDev">R1senDev</a></h2>
+        <h3>&#171;Меня зовут Айко. Я всегда буду рядом!&#187; ^v^</h3>
+    </div>
+
+    <h1 class="xtrans">// Быстрая настройка нейросети</h1>
+
+    <div class="block lpad">
+        <h1 class="aikospeech">&#171;Познакомимся?&#187;</h1>
+        <table>
+            <tr>
+                <td class="first-col">Меня зовут&nbsp;</td>
+                <td><input type="text" id="name"></td>
+            </tr>
+            <tr>
+                <td class="first-col">..а полностью &ndash;&nbsp;</td>
+                <td><input type="text" id="fullname"></td>
+            </tr>
+            <tr>
+                <td class="first-col">Я&nbsp;</td>
+                <td>
+                    <select id="sex">
+                        <option value="мужчина" selected>мужчина</option>
+                        <option value="женщина">женщина</option>
+                        <option value="женщина">девушка</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td class="first-col">Мой возраст (0 = "не скажу") &ndash;&nbsp;</td>
+                <td><input type="number" id="age" min="0" max="80" value="0"></td>
+            </tr>
+            <tr>
+                <td class="first-col">Обращайся ко мне на&nbsp;</td>
+                <td>
+                    <select id="pron">
+                        <option value="ты" selected>"ты"</option>
+                        <option value="вы">"вы"</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>&nbsp;</td>
+                <td>
+                    <div class="button" style="margin-top: 20pt; width: 25vw;" onclick="done()">Очень приятно!<br><span class="">[Сохранить]</span></div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- <h1 class="xtrans">// Раздел для продвинутых</h1> -->
+</body>
+</html>

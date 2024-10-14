@@ -1,0 +1,95 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10pt;
+
+    color: #fff;
+    background-color: #1f1f1f;
+}
+
+#chatbox {
+    display: flex;
+    flex-direction: column;
+    gap: 10pt;
+    width: 50vw;
+    overflow-y: auto;
+}
+
+.message {
+    padding: 10pt 20pt 10pt 20pt;
+    border: solid #0008 2pt;
+    font-family: monospace;
+    font-size: 20pt;
+    max-width: fit-content;
+}
+
+.message:last-child {
+    margin-bottom: 30pt;
+}
+
+.sent {
+    color: #000;
+    background-color: #aaa;
+    text-align: right;
+    margin-left: auto;
+    border-radius: 20pt 20pt 5pt 20pt;
+}
+
+.recv {
+    color: #000;
+    background-color: #f6f;
+    text-align: left;
+    border-radius: 20pt 20pt 20pt 5pt;
+}
+
+p:first-child {
+    user-select: none;
+    opacity: 66%;
+}
+
+#inputBox {
+    display: flex;
+    position: fixed;
+    gap: 10pt;
+    bottom: 0;
+    padding: 20pt;
+    font-size: 20pt;
+    font-family: monospace;
+}
+
+#inputBox div {
+    border: solid #0008 2pt;
+    padding: 5pt;
+    border-radius: 10pt;
+    color: #000;
+    background-color: #aaa;
+    cursor: pointer;
+}
+
+input {
+    border: solid #0008 2pt;
+    border-radius: 10pt;
+    width: 75vw;
+    padding: 0 10pt 0 10pt;
+    font-size: 20pt;
+    font-family: monospace;
+}
+
+img {
+    position: fixed;
+    left: 10pt;
+    top: 10pt;
+    width: 150pt;
+    opacity: 66%;
+    transition: opacity linear .1s;
+}
+
+img:hover {
+    opacity: 100%;
+}

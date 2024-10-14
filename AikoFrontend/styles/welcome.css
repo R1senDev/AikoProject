@@ -1,0 +1,106 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: left;
+    gap: 40pt;
+
+    background-color: #1f1f1f;
+    color: #fff;
+    accent-color: #f6f;
+    user-select: none;
+
+    padding: 20pt;
+
+    font-family: monospace;
+}
+
+a, a:visited {
+    color: #f6f;
+}
+
+.lpad {
+    margin-left: 100pt;
+}
+
+.xtrans {
+    opacity: 33%;
+    cursor: default;
+    user-select: none;
+    transition: opacity linear .2s;
+}
+
+.xtrans:hover {
+    opacity: 100%;
+}
+
+.htrans {
+    opacity: 50%;
+    cursor: default;
+    transition: opacity linear .2s;
+}
+
+.htrans:hover {
+    opacity: 100%;
+}
+
+h1 {
+    font-size: 60pt;
+}
+
+h2 {
+    font-size: 20pt;
+}
+
+h3 {
+    font-size: 40pt;
+    color: #f6f;
+}
+
+.aikospeech {
+    color: #f6f;
+}
+
+table {
+    text-align: left;
+    font-size: 30pt;
+}
+
+tr {
+    margin-bottom: 10pt;
+}
+
+input, select {
+    font-size: 30pt;
+    width: 25vw;
+    box-sizing: border-box;
+    font-family: monospace;
+}
+
+.first-col {
+    text-align: right;
+}
+
+.button {
+    display: inline-flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    background-color: #080;
+    text-align: center;
+    justify-content: center;
+    color: #000;
+    user-select: none;
+    cursor: pointer;
+    border-radius: 20pt;
+    padding: 15pt;
+    transition: box-shadow linear .2s;
+    box-shadow: #0a0 0 0 0pt;
+}
+
+.button:hover {
+    box-shadow: #0a0 0 0 5pt;
+}

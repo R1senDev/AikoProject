@@ -1,0 +1,14 @@
+{
+    "aikoinstance": {
+        "path": "data/AikoInstance.bin",
+        "default": null
+    },
+    "userinfo": {
+        "path": "data/userinfo.json",
+        "default": "{}"
+    },
+    "cache": {
+        "path": "data/cache.json",
+        "default": "{}"
+    }
+}
