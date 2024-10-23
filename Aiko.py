@@ -7,15 +7,16 @@ Author: Pavel Ovchinnikov (R1senDev)
 
 # Importing important stuff from Core
 print('Importing Core modules...', end = ' ')
-from Core.SetupWizard import init_aiko
-from Core.SteamBridge import SteamLibrary, SteamLaunchError
-from Core.Localizer   import set_locale, locstr
-from Core.Weather     import WeatherProvider, signify
-from Core.Shizune     import Shizune
-from Core.AikoSan     import *
-from Core.Palette     import *
-from Core.Lilly       import Lilly
-from Core.AI          import AI, Role, Message
+from Core.UpdateChecker import UpdateChecker
+from Core.SetupWizard   import init_aiko
+from Core.SteamBridge   import SteamLibrary, SteamLaunchError
+from Core.Localizer     import set_locale, locstr
+from Core.Weather       import WeatherProvider, signify
+from Core.Shizune       import Shizune
+from Core.AikoSan       import *
+from Core.Palette       import *
+from Core.Lilly         import Lilly
+from Core.AI            import AI, Role, Message
 print('Done')
 
 # Importing other stuff for basic Aiko functioning
@@ -68,6 +69,20 @@ presets['user']      = ColorPreset(Fore.WHITE)
 presets['log']       = ColorPreset(Fore.MAGENTA)
 presets['verbose']   = ColorPreset(Fore.LIGHTBLACK_EX)
 presets['error']     = ColorPreset(Fore.RED)
+presets['green'] = ColorPreset(Fore.LIGHTGREEN_EX)
+
+
+# Checking for updates
+version_info = UpdateChecker.check()
+if version_info['update_available']:
+    system('cls')
+    with presets['green']:
+        print(locstr('update_available'))
+        print(f'{locstr("version")} {version_info["latest_version"]} ({locstr("instead")} {UpdateChecker.current_version})')
+        print(f'{locstr("goto_for_update")} {UpdateChecker.target_url}')
+        print(locstr('enter_to_continue'))
+        input()
+        system('cls')
 
 
 ##############
@@ -243,6 +258,10 @@ def exec_commands(message: str) -> tuple[str, Message | None]:
                     return ('\n'.join(new_lines), Message(Role.SYSTEM, locstr('cmd_sysresp_done').format(command)))
     
     return (message, None)
+
+
+# Clearing all the logs
+system('cls')
 
 
 ##################
