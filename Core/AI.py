@@ -1,5 +1,14 @@
+'''
+Core.AI
+for AikoProject
+'''
+
+
 from g4f.client import Client
-from typing     import overload, Literal
+from typing     import Literal
+
+
+class AIError(Exception): ...
 
 
 class Role:
@@ -29,6 +38,7 @@ class Context:
 
         self.preserve_system = preserve_system
         self.messages = messages
+        self.head_message = None # type: Message | None
     
     def add(self, message: Message) -> int:
 
@@ -59,7 +69,10 @@ class Context:
 
     def jsonify(self) -> list[dict[str, str]]:
         
-        return [msg.json() for msg in self.messages]
+        out = [msg.json() for msg in self.messages]
+        if self.head_message is not None:
+            out.append(self.head_message.json())
+        return out
     
 
 class AI:
@@ -77,14 +90,20 @@ class AI:
         self.ctx.add(Message(Role.USER, prompt))
         response_text = self._client.chat.completions.create(
             model    = self.model,
-            messages = self.ctx.jsonify()
-        ).choices[0].message.content
+            messages = self.ctx.jsonify() # type: ignore
+        ).choices[0].message.content # type: ignore (as I said earlier)
+        if not isinstance(response_text, str):
+            raise AIError('unable to get response from the model')
         self.ctx.add(Message(Role.ASSISTANT, response_text))
-        print(response_text)
         return response_text
+    
+    def reset_ctx(self) -> None:
+
+        self.ctx.messages = self.ctx.messages[:1]
 
 
 __all__ = [
+    'AIError',
     'Role',
     'Message',
     'Context',
