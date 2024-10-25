@@ -9,6 +9,7 @@ Author: Pavel Ovchinnikov (R1senDev)
 print('Importing Core modules...', end = ' ')
 from Core.UpdateChecker import UpdateChecker
 from Core.SetupWizard   import init_aiko
+from Core.Knowledge     import KnowledgeKeeper
 from Core.SteamBridge   import SteamLibrary, SteamLaunchError
 from Core.Localizer     import set_locale, locstr
 from Core.Weather       import WeatherProvider, signify
@@ -16,13 +17,16 @@ from Core.Shizune       import Shizune
 from Core.AikoSan       import *
 from Core.Palette       import *
 from Core.Lilly         import Lilly
+from Core.Rin           import Rin
 from Core.AI            import AI, Role, Message
 print('Done')
 
 # Importing other stuff for basic Aiko functioning
 from webbrowser import open_new_tab
 from argparse   import ArgumentParser
+from sqlite3    import connect, IntegrityError
 from datetime   import datetime
+from os.path    import exists
 from pickle     import load, dump
 from json       import load as load_json
 from math       import floor
@@ -51,6 +55,8 @@ with open('config/prefs.json', 'r', encoding = 'utf-8') as file:
 
 # Doin' some initialization stuff
 set_locale(prefs['ui']['lang'])
+skip_user_input = False
+knowledges = KnowledgeKeeper('command-r+')
 
 
 # WeatherProvider initialization
@@ -69,7 +75,7 @@ presets['user']      = ColorPreset(Fore.WHITE)
 presets['log']       = ColorPreset(Fore.MAGENTA)
 presets['verbose']   = ColorPreset(Fore.LIGHTBLACK_EX)
 presets['error']     = ColorPreset(Fore.RED)
-presets['green'] = ColorPreset(Fore.LIGHTGREEN_EX)
+presets['green']     = ColorPreset(Fore.LIGHTGREEN_EX)
 
 
 # Checking for updates
@@ -105,6 +111,15 @@ if steam is not None:
 #####################
 
 
+class Sisters:
+
+    def __init__(self, models: str) -> None:
+
+        self.shizune = Shizune(models)
+        self.lilly   = Lilly(models)
+        self.rin     = Rin(models)
+
+
 class AikoAI(AI):
     '''
     Extended `AI` class with some extra attributes.
@@ -119,18 +134,17 @@ class AikoAI(AI):
         self.last_prompt_ts = 0
 
         # Aiko's sisters
-        self.shizune = Shizune('command-r+')
-        self.lilly   = Lilly('command-r+')
+        self.sisters = Sisters('command-r+')
 
     def prompt(self, prompt: str) -> str:
 
         dmc = self.get_displayed_messages_count()
 
-        if (not args.no_lilly) and self.lilly.call_interval > 0 and dmc > 0 and dmc % self.lilly.call_interval == 0:
+        if (not args.no_lilly) and self.sisters.lilly.call_interval > 0 and dmc > 0 and dmc % self.sisters.lilly.call_interval == 0:
             if args.verbose:
                 with presets['verbose']:
                     print('Lilly is active now! Generation will take slightly more time.')
-            self.lilly.prompt(f'''
+            self.sisters.lilly.prompt(f'''
 ### СИСТЕМНЫЙ ПРОМПТ АЙКО ###
                               
 {SYSTEM_PROMPT_BASE}
@@ -138,14 +152,14 @@ class AikoAI(AI):
 ### КОНЕЦ СИСТЕМНОГО ПРОМПТА АЙКО ###
 
 ### Фрагмент диалога для оценки:
-'''.strip('\n') + '\n\n' + self.last_messages(self.lilly.call_interval)
+'''.strip('\n') + '\n\n' + self.last_messages(self.sisters.lilly.call_interval)
             )
 
-        if (not args.no_shizune) and self.shizune.call_interval > 0 and dmc > 0 and dmc % self.shizune.call_interval == 0:
+        if (not args.no_shizune) and self.sisters.shizune.call_interval > 0 and dmc > 0 and dmc % self.sisters.shizune.call_interval == 0:
             if args.verbose:
                 with presets['verbose']:
                     print('Shizune is active now! Generation will take slightly more time.')
-            self.shizune.prompt(self.last_messages(self.shizune.call_interval))
+            self.sisters.shizune.prompt(self.last_messages(self.sisters.shizune.call_interval))
 
         return super().prompt(prompt)
 
@@ -158,10 +172,13 @@ class AikoAI(AI):
         out = []
         i = len(self.ctx.messages)
         while len(out) < max_count or i > 0:
-            i -= 1
-            if self.ctx.messages[i].role == Role.SYSTEM:
-                continue
-            out.append(f'{prefs["user"]["name"] if self.ctx.messages[i].role == Role.USER else "Айко"}: "{self.ctx.messages[i].content}"')
+            try:
+                i -= 1
+                if self.ctx.messages[i].role == Role.SYSTEM:
+                    continue
+                out.append(f'{prefs["user"]["name"] if self.ctx.messages[i].role == Role.USER else "Айко"}: "{self.ctx.messages[i].content}"')
+            except IndexError:
+                break
         return '\n'.join(out)
 
 
@@ -221,10 +238,10 @@ def exec_commands(message: str) -> tuple[str, Message | None]:
             match command:
 
                 case 'silence':
-                    return ('-> Айко молчит.', None)
+                    return ('\u2192 Айко молчит.', None)
 
                 case 'pyexec':
-                    new_lines[i] = f'{Fore.LIGHTBLACK_EX}-> {locstr("pyexec_desc")}{Fore.LIGHTGREEN_EX}'
+                    new_lines[i] = f'{Fore.LIGHTBLACK_EX}\u2192 {locstr("pyexec_desc")}{Fore.LIGHTGREEN_EX}'
                     try:
                         exec(' '.join(args))
                     except:
@@ -232,30 +249,39 @@ def exec_commands(message: str) -> tuple[str, Message | None]:
                     return ('\n'.join(new_lines), Message(Role.SYSTEM, locstr('cmd_sysresp_done').format(command)))
 
                 case 'wincmd':
-                    new_lines[i] = f'{Fore.LIGHTBLACK_EX}-> {locstr("wincmd_desc")}{Fore.LIGHTGREEN_EX}'
+                    new_lines[i] = f'{Fore.LIGHTBLACK_EX}\u2192 {locstr("wincmd_desc")}{Fore.LIGHTGREEN_EX}'
                     system(' '.join(args))
                     return ('\n'.join(new_lines), Message(Role.SYSTEM, locstr('cmd_sysresp_done').format(command)))
 
                 case 'open_browser_tab':
                     open_new_tab(' '.join(args))
-                    new_lines[i] = f'{Fore.LIGHTBLACK_EX}-> {locstr("open_browser_tab_desc")}{Fore.LIGHTGREEN_EX}'
+                    new_lines[i] = f'{Fore.LIGHTBLACK_EX}\u2192 {locstr("open_browser_tab_desc")}{Fore.LIGHTGREEN_EX}'
                     return ('\n'.join(new_lines), Message(Role.SYSTEM, locstr('cmd_sysresp_done').format(command)))
 
                 case 'start_game':
 
                     if steam is None:
-                        new_lines[i] = f'{Fore.LIGHTBLACK_EX}-> {locstr("start_game_fail_noinit_desc").format(" ".join(args))}{Fore.LIGHTGREEN_EX}'
+                        new_lines[i] = f'{Fore.LIGHTBLACK_EX}\u2192 {locstr("start_game_fail_noinit_desc").format(" ".join(args))}{Fore.LIGHTGREEN_EX}'
                         return ('\n'.join(new_lines), Message(Role.SYSTEM, locstr('start_game_fail_noinit_desc').format(command)))
 
                     try:
-                        new_lines[i] = f'{Fore.LIGHTBLACK_EX}-> {locstr("start_game_ok_desc").format(" ".join(args))}{Fore.LIGHTGREEN_EX}'
+                        new_lines[i] = f'{Fore.LIGHTBLACK_EX}\u2192 {locstr("start_game_ok_desc").format(" ".join(args))}{Fore.LIGHTGREEN_EX}'
                         steam.run_game_by_name(' '.join(args))
 
                     except SteamLaunchError:
-                        new_lines[i] = f'{Fore.LIGHTBLACK_EX}-> {locstr("start_game_fail_nogame_desc").format(" ".join(args))}{Fore.LIGHTGREEN_EX}'
+                        new_lines[i] = f'{Fore.LIGHTBLACK_EX}\u2192 {locstr("start_game_fail_nogame_desc").format(" ".join(args))}{Fore.LIGHTGREEN_EX}'
                         return ('\n'.join(new_lines), Message(Role.SYSTEM, locstr('cmd_sysresp_start_game_fail').format(' '.join(args))))
 
                     return ('\n'.join(new_lines), Message(Role.SYSTEM, locstr('cmd_sysresp_done').format(command)))
+            
+                case 'search_about':
+
+                    global skip_user_input
+
+                    new_lines[i] = f'{Fore.LIGHTBLACK_EX}\u2192 {locstr("search_about_desc").format(" ".join(args))}{Fore.LIGHTGREEN_EX}'
+                    aiko.ctx.add(Message(Role.SYSTEM, aiko.sisters.rin.prompt(' '.join(args))))
+                    skip_user_input = True
+                    return ('\n'.join(new_lines), None)
     
     return (message, None)
 
@@ -302,59 +328,83 @@ except:
 
 while True:
 
-    with presets['user']:
-        prompt = input(locstr('you_title_nl'))
+    if not skip_user_input:
+        with presets['user']:
+            prompt = input(locstr('you_title_nl'))
 
-    if weather is not None:
-        # Requesting current weather data
-        current_weather = weather.current()
-        # Building string describing current weather outside
-        current_weather_str = f'{signify(round(current_weather["temperature"]))} {locstr("deg_celsius")}, '
-        if current_weather['snowfall']:
-            current_weather_str += locstr('snowfall')
-        elif current_weather['showers']:
-            current_weather_str += locstr('showers')
-        elif current_weather['rain']:
-            current_weather_str += locstr('rain')
-        else:
-            current_weather_str += locstr('clear_weather')
-        current_weather_str += f', {locstr("wind_speed")}: {current_weather["wind_speed"]} {locstr("mps")}'
+        if weather is not None:
+            # Requesting current weather data
+            current_weather = weather.current()
+            # Building string describing current weather outside
+            current_weather_str = f'{signify(round(current_weather["temperature"]))} {locstr("deg_celsius")}, '
+            if current_weather['snowfall']:
+                current_weather_str += locstr('snowfall')
+            elif current_weather['showers']:
+                current_weather_str += locstr('showers')
+            elif current_weather['rain']:
+                current_weather_str += locstr('rain')
+            else:
+                current_weather_str += locstr('clear_weather')
+            current_weather_str += f', {locstr("wind_speed")}: {current_weather["wind_speed"]} {locstr("mps")}'
     
-    if prompt == '//debug_info':
-        with presets['verbose']:
-            if steam is None:
-                print('steam is None')
+        if prompt == '//debug_info':
+            with presets['verbose']:
+                if steam is None:
+                    print('steam is None')
+                    continue
+                print(f'aiko.sisters.shizune.last_verdict:\n{aiko.sisters.shizune.last_verdict}\n')
+                print(f'aiko.sisters.lilly.last_verdict:\n{aiko.sisters.lilly.last_verdict}\n')
+                print(f'aiko.sisters.rin.last_reply:\n{aiko.sisters.rin.last_reply}\n')
+                print(f'knowledges.getter_ai.last_reply:\n{knowledges.getter_ai.last_reply}\n')
+                print(f'current_weather_str:\n{current_weather_str}')
                 continue
-            print(f'steam._installed_games_cache:\n{steam._installed_games_cache}\n')
-            print(f'aiko.shizune.last_verdict:\n{aiko.shizune.last_verdict}\n')
-            print(f'aiko.lilly.last_verdict:\n{aiko.lilly.last_verdict}\n')
-            print(f'current_weather_string:\n{current_weather_str}')
-            continue
 
-    aiko.ctx.head_message = Message(Role.SYSTEM, f'''
+        # idk if I want to change the value below to 2, I'll try it at some time
+        #
+        # Aiko: "He said "never""
+        # R1senDev: "shut your freaking face up you little b-"
+
+        matching_kledge_line = knowledges.get(aiko.last_messages(4))
+
+        aiko.ctx.head_message = Message(Role.SYSTEM, f'''
 ### Следующая информация предоставлена в справочных целях. Она необязательно должна повлиять на ответ, но может, если это уместно.
 
 - Текущие дата и время: {datetime.now().strftime("%H:%M, %A, %d %B %Y")}
 - Погода за окном пользователя: {"[не удалось получить данные]" if weather is None else current_weather_str}
 - Время, прошедшее с последнего обращения пользователя к тебе: {str(floor(time() - aiko.last_prompt_ts) // 60) + " мин. " + str(floor(time() - aiko.last_prompt_ts) % 60) + " сек." if aiko.last_prompt_ts != 0 else '[никогда]'}
 
+### Настроения участников диалога
+
+{'[Информация появится здесь позже.]' if aiko.sisters.shizune.last_verdict is None else aiko.sisters.shizune.last_verdict}
+
+### Замечания по твоему поведению от твоей сестры-нейросети Лилли
+
+{'[Пока что Лилли не анализировала ваш диалог.]' if aiko.sisters.lilly.last_verdict is None else aiko.sisters.lilly.last_verdict}
+
 ### Напоминания
 
 - Ты можешь отправить ЛИБО одну команду, ЛИБО текст, который будет являться ответом на сообщение пользователя, ЛИБО текст с командой СТРОГО В НАЧАЛЕ
 - Если команда будет в середине или в конце текста, она НЕ СРАБОТАЕТ.
 - Доступные команды перечислены в первом системном промпте в разделе [Список доступных команд]
+- СТРОГО ЗАПРЕЩЕНО ОТВЕЧАТЬ НА РЕКОМЕНДАЦИИ ОТ ЛИЛЛИ.
+- [КРАЙНЕ ВАЖНО:] Если ты не уверена в достоверности информации, которую ты предоставляешь пользователю, используй команду //search_about.
+    
+### Подсказка от Библиотекаря из твоей Базы Знаний
 
-### Настроения участников диалога
-
-{'[Информация появится здесь позже.]' if aiko.shizune.last_verdict is None else aiko.shizune.last_verdict}
-
-### Замечания по твоему поведению от твоей сестры-нейросети Лилли
-
-{'[Пока Лилли не анализировала ваш диалог.]' if aiko.lilly.last_verdict is None else aiko.lilly.last_verdict}
+{matching_kledge_line}
 '''.strip('\n'))
+        
+    else:
+        aiko.ctx.head_message = None
 
     with presets['verbose']:
         response = aiko.prompt(prompt)
+
+    if aiko.get_displayed_messages_count() % 8 == 0:
+        if args.verbose:
+            with presets['verbose']:
+                print('KK is analyzing conversation right now')
+        knowledges.put(aiko.last_messages(8))
 
     response, system_status_message = exec_commands(response)
     if system_status_message is not None:
@@ -367,3 +417,5 @@ while True:
 
     with open(INSTANCE_FNAME, 'wb') as file:
         dump(aiko, file)
+
+    skip_user_input = False

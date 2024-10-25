@@ -66,6 +66,9 @@ class Context:
         self.messages = new_msg_list
         
         return len(self.messages)
+    
+    def __len__(self) -> int:
+        return len(self.messages)
 
     def jsonify(self) -> list[dict[str, str]]:
         

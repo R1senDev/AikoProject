@@ -1,5 +1,7 @@
 .venv/
 .vscode/
 Core/__pycache__
+data/knowledge.db
+stash/
 Aiko.exe
 Aiko.bin
