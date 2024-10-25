@@ -119,3 +119,6 @@ CREATE TABLE "memories" (
     def get(self, context: str) -> str:
 
         return self.getter_ai.prompt(context, self.get_db_contents())
+
+
+# This line was added in the SEX UPDATE OF ALL TIMES
